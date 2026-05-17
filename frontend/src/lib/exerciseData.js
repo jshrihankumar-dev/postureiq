@@ -81,7 +81,7 @@ export const EXERCISES = {
     }
   ],
 
-  lateral_lean: [
+  lat_lean: [
     {
       name: "Side Stretch",
       target: "Side Body Flexibility",
@@ -99,3 +99,20 @@ export const EXERCISES = {
   ]
 };
 
+export function getExercises(issues) {
+  const selectedExercises = [];
+
+  issues.forEach((issue) => {
+    const exercisesForIssue = EXERCISES[issue.key];
+
+    if (exercisesForIssue) {
+      selectedExercises.push(...exercisesForIssue);
+    }
+  });
+
+  const uniqueExercises = selectedExercises.filter((exercise, index, array) => {
+    return index === array.findIndex((item) => item.name === exercise.name);
+  });
+
+  return uniqueExercises.slice(0, 6);
+}
