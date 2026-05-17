@@ -1,3 +1,6 @@
+const scoreBuffer = []
+const BUFFER_SIZE = 8
+
 // Calculates angle between three points
 export function calculateAngle(a, b, c) {
   const radians =
@@ -15,36 +18,146 @@ export function calculateAngle(a, b, c) {
 
 //Defines the landmarks
 export function analyzePosture(landmarks) {
-    const leftEar = landmarks[7]
-    const rightEar = landmarks[8]
-    const leftShoulder = landmarks[11]
-    const rightShoulder = landmarks[12]
-    const leftHip = landmarks[23]
-    const rightHip = landmarks[24]
-}
+    const leftEar = landmarks[7];
+    const rightEar = landmarks[8];
+    const leftShoulder = landmarks[11];
+    const rightShoulder = landmarks[12];
+    const leftHip = landmarks[23];
+    const rightHip = landmarks[24];
+
 // Midpoint functions
 const earMid = {
   x: (leftEar.x + rightEar.x) / 2,
   y: (leftEar.y + rightEar.y) / 2
-}
+};
 
 const shoulderMid = {
   x: (leftShoulder.x + rightShoulder.x) / 2,
   y: (leftShoulder.y + rightShoulder.y) / 2
-}
+};
 
 const hipMid = {
   x: (leftHip.x + rightHip.x) / 2,
-    y: (leftHip.y + rightHip.y) / 2
-}
+  y: (leftHip.y + rightHip.y) / 2
+};
 
 //Stores issues and deductions for the posture analysis
-const issues = []
-let deductions = 0  
+const issues = [];
+let deductions = 0;  
 
 //Calculating the forward head
 const neckAngle = calculateAngle(earMid, shoulderMid, hipMid)
 
 if (neckAngle < 145) {
-    
+  issues.push({key: "forward_head", label: "Forward Head Posture", severity: "severe"});
+  deductions = deductions - 25;
+}
+else if (neckAngle < 160) {
+  issues.push({key: "forward_head", label: "Forward Head Posture", severity: "mild"});
+  deductions = deductions -10;
+}
+
+//Calculating the rounded shoulders
+const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
+const leftRounding = Math.abs(leftEar.x - leftShoulder.x);
+const rightRounding = Math.abs(rightEar.x - rightShoulder.x);
+const avgRounding = (leftRounding + rightRounding) / 2 / shoulderWidth;
+
+if (avgRounding > 0.3) {
+  issues.push({key: "rounded_shoulders", label: "Rounded Shoulders", severity: "severe"});
+  deductions = deductions - 20;
+
+}
+else if (avgRounding > 0.15) {
+  issues.push({key: "rounded_shoulders", label: "Rounded Shoulders", severity: "mild"});
+  deductions = deductions - 10;
+}
+
+//Calculate uneven shoulders
+const shoulderDiff = Math.abs(leftShoulder.y - rightShoulder.y);
+
+if (shoulderDiff > 0.05) {
+  issues.push({key: "uneven_shoulders", label: "Uneven Shoulders", severity: "severe"});
+  deductions = deductions - 15;
+}
+
+else if (shoulderDiff > 0.025) {
+  issues.push({key: "uneven_shoulders", label: "Uneven Shoulders", severity: "mild"});
+  deductions = deductions - 5;
+}
+
+//Calculate Lateral lean
+let latlean = Math.abs(shoulderMid.x - hipMid.x)
+
+if (latlean > 0.06) {
+  issues.push({key: "lat_lean", label: "Lateral Lean", severity: "severe"});
+  deductions = deductions - 15;
+}
+
+else if (latlean > 0.03) {
+  issues.push({key: "lat_lean", label: "Lateral Lean", severity: "mild"});
+  deductions = deductions - 5;
+}
+
+//Calculate Hunched Back
+const spineAngle = calculateAngle(hipMid,shoulderMid,earMid);
+
+if (spineAngle < 140) {
+  issues.push({key: "hunched_back", label: "Hunched Back", severity: "severe"});
+  deductions = deductions - 20;
+}
+
+else if (spineAngle < 155) {
+  issues.push({key: "hunched_back", label: "Hunched Back", severity: "mild"});
+  deductions = deductions - 8;
+}
+
+//final calc
+const score = Math.max(0, Math.min(100, 100 + deductions))
+
+let grade = "";
+let gradeClass = "";
+
+if (score >= 90) {
+  grade = "Excellent";
+  gradeClass = "excellent";
+} else if (score >= 75) {
+  grade = "Good";
+  gradeClass = "good";
+} else if (score >= 55) {
+  grade = "Fair";
+  gradeClass = "fair";
+} else {
+  grade = "Poor";
+  gradeClass = "poor";
+}
+
+if (issues.length === 0) {
+  issues.push({ key: null, label: 'Posture looks good!', severity: 'ok' })
+}
+
+return {
+  score,
+  grade,
+  gradeClass,
+  issues,
+  angles: {
+    neck: Math.round(neckAngle),
+    spine: Math.round(spineAngle)
+  }
+}
+}
+
+function smoothScore(newScore) {
+  scoreBuffer.push(newScore);
+
+  if (scoreBuffer.length > BUFFER_SIZE) {
+    scoreBuffer.shift();
+  }
+
+  const total = scoreBuffer.reduce((sum, score) => sum + score, 0);
+
+  const average = total / scoreBuffer.length;
+
+  return Math.round(average);
 }
