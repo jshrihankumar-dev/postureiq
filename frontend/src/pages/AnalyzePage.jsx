@@ -6,35 +6,46 @@ import ExerciseGrid from "../components/ExerciseGrid";
 
 export default function AnalyzePage() {
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const score = analysisResult?.score ?? 0;
   const grade = analysisResult?.grade ?? "Waiting";
   const gradeClass = analysisResult?.gradeClass ?? "poor";
   const issues = analysisResult?.issues ?? [];
-  const cameraActive = analysisResult !== null;
 
   return (
-    <main className="min-h-screen bg-gray-950 px-6 py-8 text-white">
+    <main className="min-h-screen bg-[#050816] px-6 py-8 text-white">
       <section className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-teal-400">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 shadow-2xl shadow-black/40">
+          <p className="text-sm font-black uppercase tracking-[0.45em] text-teal-300">
             PostureIQ
           </p>
 
-          <h1 className="mt-3 text-4xl font-bold">
+          <h1 className="mt-5 text-5xl font-black tracking-tight text-white">
             Real-Time Posture Analysis
           </h1>
 
-          <p className="mt-3 max-w-2xl text-gray-400">
-            Enable your camera to analyze posture, detect alignment issues, and
-            receive corrective exercise suggestions.
+          <p className="mt-4 max-w-3xl text-lg leading-relaxed text-gray-400">
+            Track your posture using live computer vision, detect alignment
+            issues, and get targeted corrective exercises.
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
-          <CameraFeed onResults={setAnalysisResult} />
+        <div className="mt-8 grid gap-8 lg:grid-cols-[1.7fr_1fr]">
+          <CameraFeed
+            onResults={setAnalysisResult}
+            onCameraActiveChange={setCameraActive}
+            onAnalyzingChange={setIsAnalyzing}
+          />
 
           <aside className="space-y-6">
+            {isAnalyzing && (
+              <div className="rounded-3xl border border-teal-400/30 bg-teal-400/10 p-5 text-center text-lg font-bold text-teal-300 shadow-xl shadow-teal-950/20">
+                Analyzing posture...
+              </div>
+            )}
+
             <ScoreDisplay
               score={score}
               grade={grade}
@@ -42,9 +53,15 @@ export default function AnalyzePage() {
               issueCount={issues.length}
             />
 
-            <IssuesList issues={issues} cameraActive={cameraActive} />
+            <IssuesList
+              issues={issues}
+              cameraActive={cameraActive}
+              isAnalyzing={isAnalyzing}
+            />
 
-            <ExerciseGrid issues={issues} />
+            <ExerciseGrid
+              issues={cameraActive && !isAnalyzing ? issues : []}
+            />
           </aside>
         </div>
       </section>

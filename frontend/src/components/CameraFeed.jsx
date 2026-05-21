@@ -4,10 +4,13 @@ import {
   FilesetResolver,
   DrawingUtils
 } from "@mediapipe/tasks-vision";
-
 import { analyzePosture } from "../lib/postureAnalysis";
 
-export default function CameraFeed({ onResults }) {
+export default function CameraFeed({
+  onResults,
+  onCameraActiveChange,
+  onAnalyzingChange
+}) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -16,6 +19,26 @@ export default function CameraFeed({ onResults }) {
 
   const [cameraActive, setCameraActive] = useState(false);
 
+  function stopCamera() {
+    setCameraActive(false);
+    onCameraActiveChange(false);
+    onAnalyzingChange(false);
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (landmarkerRef.current) {
+      landmarkerRef.current.close();
+      landmarkerRef.current = null;
+    }
+  }
+
   useEffect(() => {
     if (!cameraActive) {
       return;
@@ -23,6 +46,9 @@ export default function CameraFeed({ onResults }) {
 
     async function startCameraAndPose() {
       try {
+        onCameraActiveChange(true);
+        onAnalyzingChange(true);
+
         const vision = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
         );
@@ -42,110 +68,66 @@ export default function CameraFeed({ onResults }) {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
-
         const drawingUtils = new DrawingUtils(ctx);
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: 640,
-            height: 480
-          }
+          video: { width: 640, height: 480 }
         });
 
         streamRef.current = stream;
-
         video.srcObject = stream;
-
         await video.play();
 
         function renderLoop() {
-          if (!video.videoWidth || !video.videoHeight) {
-            animationRef.current =
-              requestAnimationFrame(renderLoop);
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
 
-            return;
-          }
-
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           ctx.save();
-
-          ctx.clearRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
-
           ctx.scale(-1, 1);
-
-          ctx.drawImage(
-            video,
-            -canvas.width,
-            0,
-            canvas.width,
-            canvas.height
-          );
-
+          ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
           ctx.restore();
 
-          const results =
-            poseLandmarker.detectForVideo(
-              video,
-              performance.now()
-            );
+          const results = poseLandmarker.detectForVideo(
+            video,
+            performance.now()
+          );
 
-          if (
-            results.landmarks &&
-            results.landmarks.length > 0
-          ) {
+          if (results.landmarks && results.landmarks.length > 0) {
+            onAnalyzingChange(false);
+
             const landmarks = results.landmarks[0];
 
             ctx.save();
-
             ctx.scale(-1, 1);
-
             ctx.translate(-canvas.width, 0);
 
             drawingUtils.drawConnectors(
               landmarks,
               PoseLandmarker.POSE_CONNECTIONS,
-              {
-                color: "#00ff66",
-                lineWidth: 4
-              }
+              { color: "#14b8a6", lineWidth: 4 }
             );
 
-            drawingUtils.drawLandmarks(
-              landmarks,
-              {
-                color: "#ff2dff",
-                lineWidth: 2,
-                radius: 5
-              }
-            );
+            drawingUtils.drawLandmarks(landmarks, {
+              color: "#a855f7",
+              lineWidth: 2,
+              radius: 5
+            });
 
             ctx.restore();
 
-            const analysisResult =
-              analyzePosture(landmarks);
-
-            if (onResults) {
-              onResults(analysisResult);
-            }
+            onResults(analyzePosture(landmarks));
           }
 
-          animationRef.current =
-            requestAnimationFrame(renderLoop);
+          animationRef.current = requestAnimationFrame(renderLoop);
         }
 
         renderLoop();
       } catch (error) {
-        console.error(
-          "Camera or MediaPipe failed:",
-          error
-        );
+        console.error("Camera or MediaPipe failed:", error);
+        onCameraActiveChange(false);
+        onAnalyzingChange(false);
       }
     }
 
@@ -155,42 +137,34 @@ export default function CameraFeed({ onResults }) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-
-      if (streamRef.current) {
-        streamRef.current
-          .getTracks()
-          .forEach((track) => {
-            track.stop();
-          });
-      }
-
-      if (landmarkerRef.current) {
-        landmarkerRef.current.close();
-      }
     };
-  }, [cameraActive, onResults]);
+  }, [cameraActive, onResults, onCameraActiveChange, onAnalyzingChange]);
 
   return (
-    <div className="relative h-[480px] w-full max-w-3xl overflow-hidden rounded-2xl bg-black">
-      <video
-        ref={videoRef}
-        playsInline
-        muted
-        style={{ display: "none" }}
-      />
+    <div className="relative h-[520px] overflow-hidden rounded-3xl border border-teal-500/20 bg-black shadow-2xl shadow-teal-950/40">
+      <video ref={videoRef} playsInline muted style={{ display: "none" }} />
 
-      <canvas
-        ref={canvasRef}
-        className="h-full w-full bg-black"
-      />
+      <canvas ref={canvasRef} className="h-full w-full bg-black object-cover" />
 
-      {!cameraActive && (
+      <div className="absolute left-5 top-5 rounded-full border border-white/10 bg-black/50 px-4 py-2 text-sm font-medium text-teal-300 backdrop-blur">
+        Live Pose Camera
+      </div>
+
+      {!cameraActive ? (
         <button
           type="button"
           onClick={() => setCameraActive(true)}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white px-6 py-3 font-semibold text-black shadow-lg"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-teal-400 px-8 py-4 text-lg font-black text-black shadow-xl shadow-teal-500/30 transition hover:bg-teal-300"
         >
           Start Camera
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={stopCamera}
+          className="absolute right-5 top-5 rounded-xl bg-red-500 px-5 py-2 font-bold text-white shadow-lg transition hover:bg-red-400"
+        >
+          Stop
         </button>
       )}
     </div>
