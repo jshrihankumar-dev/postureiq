@@ -13,6 +13,7 @@ export default function AnalyzePage() {
   const grade = analysisResult?.grade ?? "Waiting";
   const gradeClass = analysisResult?.gradeClass ?? "poor";
   const issues = analysisResult?.issues ?? [];
+  const hasResults = analysisResult !== null;
 
   return (
     <main className="min-h-screen bg-[#050816] px-6 py-8 text-white">
@@ -57,11 +58,10 @@ export default function AnalyzePage() {
               issues={issues}
               cameraActive={cameraActive}
               isAnalyzing={isAnalyzing}
+              hasResults={hasResults}
             />
 
-            <ExerciseGrid
-              issues={cameraActive && !isAnalyzing ? issues : []}
-            />
+            <ExerciseGrid issues={issues} hasResults={hasResults} />
           </aside>
         </div>
       </section>

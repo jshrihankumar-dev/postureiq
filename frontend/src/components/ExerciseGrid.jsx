@@ -1,19 +1,23 @@
 import ExerciseCard from "./ExerciseCard";
 import { getExercises } from "../lib/exerciseData";
 
-export default function ExerciseGrid({ issues }) {
+export default function ExerciseGrid({ issues, hasResults }) {
   const exercises = getExercises(issues);
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/30">
-      <h2 className="text-xl font-black text-white">Recommended Exercises</h2>
+    <div className="rounded-3xl border border-white/10 bg-[#10131f] p-6 text-white shadow-2xl">
+      <h2 className="text-xl font-black">Recommended Exercises</h2>
 
-      {exercises.length === 0 ? (
+      {!hasResults ? (
         <p className="mt-4 text-gray-500">
-          Exercises will appear after posture issues are detected.
+          Exercises appear after posture analysis.
+        </p>
+      ) : exercises.length === 0 ? (
+        <p className="mt-4 text-emerald-300">
+          No corrective exercises needed right now.
         </p>
       ) : (
-        <div className="mt-5 grid gap-4">
+        <div className="mt-5 space-y-4">
           {exercises.map((exercise) => (
             <ExerciseCard
               key={exercise.name}
