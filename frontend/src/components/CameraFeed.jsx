@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { Pose, POSE_CONNECTIONS } from "@mediapipe/pose";
-import { Camera } from "@mediapipe/camera_utils";
-import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+import {
+  PoseLandmarker,
+  FilesetResolver,
+  DrawingUtils
+} from "@mediapipe/tasks-vision";
+
 import { analyzePosture } from "../lib/postureAnalysis";
 
 export default function CameraFeed({ onResults }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const cameraRef = useRef(null);
+  const streamRef = useRef(null);
+  const animationRef = useRef(null);
+  const landmarkerRef = useRef(null);
 
   const [cameraActive, setCameraActive] = useState(false);
 
@@ -16,101 +21,174 @@ export default function CameraFeed({ onResults }) {
       return;
     }
 
-    const videoElement = videoRef.current;
-    const canvasElement = canvasRef.current;
-    const canvasCtx = canvasElement.getContext("2d");
+    async function startCameraAndPose() {
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        );
 
-    const pose = new Pose({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-      }
-    });
-
-    pose.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      enableSegmentation: false,
-      smoothSegmentation: false,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
-
-    pose.onResults((results) => {
-      if (!results.image) {
-        return;
-      }
-
-      canvasElement.width = results.image.width;
-      canvasElement.height = results.image.height;
-
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-      canvasCtx.drawImage(
-        results.image,
-        0,
-        0,
-        canvasElement.width,
-        canvasElement.height
-      );
-
-      if (results.poseLandmarks) {
-        const visibleLandmarks = results.poseLandmarks.filter((landmark) => {
-          return landmark.visibility > 0.5;
+        const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath:
+              "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task",
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numPoses: 1
         });
 
-        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {
-          color: "#00ff66",
-          lineWidth: 4
+        landmarkerRef.current = poseLandmarker;
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+
+        const drawingUtils = new DrawingUtils(ctx);
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: 640,
+            height: 480
+          }
         });
 
-        drawLandmarks(canvasCtx, visibleLandmarks, {
-          color: "#ff2dff",
-          lineWidth: 2,
-          radius: 5
-        });
+        streamRef.current = stream;
 
-        const analysisResult = analyzePosture(results.poseLandmarks);
+        video.srcObject = stream;
 
-        if (onResults) {
-          onResults(analysisResult);
+        await video.play();
+
+        function renderLoop() {
+          if (!video.videoWidth || !video.videoHeight) {
+            animationRef.current =
+              requestAnimationFrame(renderLoop);
+
+            return;
+          }
+
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
+          ctx.save();
+
+          ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+
+          ctx.scale(-1, 1);
+
+          ctx.drawImage(
+            video,
+            -canvas.width,
+            0,
+            canvas.width,
+            canvas.height
+          );
+
+          ctx.restore();
+
+          const results =
+            poseLandmarker.detectForVideo(
+              video,
+              performance.now()
+            );
+
+          if (
+            results.landmarks &&
+            results.landmarks.length > 0
+          ) {
+            const landmarks = results.landmarks[0];
+
+            ctx.save();
+
+            ctx.scale(-1, 1);
+
+            ctx.translate(-canvas.width, 0);
+
+            drawingUtils.drawConnectors(
+              landmarks,
+              PoseLandmarker.POSE_CONNECTIONS,
+              {
+                color: "#00ff66",
+                lineWidth: 4
+              }
+            );
+
+            drawingUtils.drawLandmarks(
+              landmarks,
+              {
+                color: "#ff2dff",
+                lineWidth: 2,
+                radius: 5
+              }
+            );
+
+            ctx.restore();
+
+            const analysisResult =
+              analyzePosture(landmarks);
+
+            if (onResults) {
+              onResults(analysisResult);
+            }
+          }
+
+          animationRef.current =
+            requestAnimationFrame(renderLoop);
         }
+
+        renderLoop();
+      } catch (error) {
+        console.error(
+          "Camera or MediaPipe failed:",
+          error
+        );
       }
+    }
 
-      canvasCtx.restore();
-    });
-
-    cameraRef.current = new Camera(videoElement, {
-      onFrame: async () => {
-        await pose.send({ image: videoElement });
-      },
-      width: 640,
-      height: 480
-    });
-
-    cameraRef.current.start();
+    startCameraAndPose();
 
     return () => {
-      if (cameraRef.current) {
-        cameraRef.current.stop();
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+
+      if (streamRef.current) {
+        streamRef.current
+          .getTracks()
+          .forEach((track) => {
+            track.stop();
+          });
+      }
+
+      if (landmarkerRef.current) {
+        landmarkerRef.current.close();
       }
     };
   }, [cameraActive, onResults]);
 
   return (
-    <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl bg-black">
-      <video ref={videoRef} className="hidden" playsInline />
+    <div className="relative h-[480px] w-full max-w-3xl overflow-hidden rounded-2xl bg-black">
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        style={{ display: "none" }}
+      />
 
       <canvas
         ref={canvasRef}
-        className="w-full scale-x-[-1]"
+        className="h-full w-full bg-black"
       />
 
       {!cameraActive && (
         <button
           type="button"
           onClick={() => setCameraActive(true)}
-          className="absolute left-1/2 top-1/2 rounded-xl bg-white px-6 py-3 font-semibold text-black shadow-lg"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white px-6 py-3 font-semibold text-black shadow-lg"
         >
           Start Camera
         </button>
