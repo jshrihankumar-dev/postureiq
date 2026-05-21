@@ -120,11 +120,11 @@ export function analyzePosture(landmarks) {
   }
 
   // Calculate lateral lean
-  const latlean = Math.abs(
+  const lateralLean = Math.abs(
     shoulderMid.x - hipMid.x
   );
 
-  if (latlean > 0.06) {
+  if (lateralLean > 0.06) {
     issues.push({
       key: "lateral_lean",
       label: "Lateral Lean",
@@ -132,7 +132,7 @@ export function analyzePosture(landmarks) {
     });
 
     deductions -= 15;
-  } else if (latlean > 0.03) {
+  } else if (lateralLean > 0.03) {
     issues.push({
       key: "lateral_lean",
       label: "Lateral Lean",
@@ -175,9 +175,9 @@ export function analyzePosture(landmarks) {
 
   const score = smoothScore(rawScore);
 
-  let grade = "";
-  let gradeClass = "";
-
+  let grade;
+  let gradeClass;
+  
   if (score >= 90) {
     grade = "Excellent";
     gradeClass = "excellent";
