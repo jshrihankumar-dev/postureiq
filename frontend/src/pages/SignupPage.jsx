@@ -30,7 +30,7 @@ export default function SignupPage() {
 
     try {
       const response = await fetch(
-        "http://amused-encouragement-production-21c9.up.railway.app/auth/signup",
+        "https://amused-encouragement-production-21c9.up.railway.app/auth/signup",
         {
           method: "POST",
           headers: {

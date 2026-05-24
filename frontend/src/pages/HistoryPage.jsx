@@ -28,7 +28,7 @@ export default function HistoryPage() {
         const user = JSON.parse(storedUser);
 
         const response = await fetch(
-          `http://amused-encouragement-production-21c9.up.railway.app/sessions/${user.id}`
+          `https://amused-encouragement-production-21c9.up.railway.app/sessions/${user.id}`
         );
 
         const data = await response.json();
