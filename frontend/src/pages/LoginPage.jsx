@@ -24,7 +24,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        "http://amused-encouragement-production-6fda.up.railway.app/auth/login",
+        "http://amused-encouragement-production-21c9.up.railway.app/auth/login",
         {
           method: "POST",
           headers: {

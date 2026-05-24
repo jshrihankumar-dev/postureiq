@@ -49,7 +49,7 @@ export default function AnalyzePage() {
 
     try {
       const response = await fetch(
-        "http://amused-encouragement-production-6fda.up.railway.app/sessions",
+        "http://amused-encouragement-production-21c9.up.railway.app/sessions",
         {
           method: "POST",
           headers: {
