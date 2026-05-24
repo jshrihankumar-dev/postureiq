@@ -5,11 +5,16 @@ export default function SignupPage() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
+  const [
+    confirmPassword,
+    setConfirmPassword
+  ] = useState("");
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
   async function handleSignup(event) {
     event.preventDefault();
@@ -24,30 +29,39 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
-      });
+      const response = await fetch(
+        "http://127.0.0.1:8000/auth/signup",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Signup failed");
+        throw new Error(
+          data.detail || "Signup failed"
+        );
       }
 
       navigate("/login", {
         state: {
-          message: "Account created! Please log in."
+          message:
+            "Account created! Please check your email to confirm your account, then log in."
         }
       });
     } catch (error) {
-      setError("Could not create account");
+      setError(
+        "Could not create account"
+      );
     }
 
     setLoading(false);
@@ -61,10 +75,14 @@ export default function SignupPage() {
         </h1>
 
         <p className="mb-8 text-gray-400">
-          Sign up to start tracking your posture history.
+          Sign up to start tracking your
+          posture history.
         </p>
 
-        <form onSubmit={handleSignup} className="space-y-5">
+        <form
+          onSubmit={handleSignup}
+          className="space-y-5"
+        >
           <div>
             <label className="mb-2 block text-sm text-gray-300">
               Email
@@ -73,7 +91,9 @@ export default function SignupPage() {
             <input
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) =>
+                setEmail(event.target.value)
+              }
               required
               className="w-full rounded-xl border border-white/10 bg-[#11182d] px-4 py-3 text-white outline-none transition focus:border-cyan-400"
               placeholder="Enter email"
@@ -88,7 +108,11 @@ export default function SignupPage() {
             <input
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) =>
+                setPassword(
+                  event.target.value
+                )
+              }
               required
               className="w-full rounded-xl border border-white/10 bg-[#11182d] px-4 py-3 text-white outline-none transition focus:border-cyan-400"
               placeholder="Create password"
@@ -103,21 +127,31 @@ export default function SignupPage() {
             <input
               type="password"
               value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
+              onChange={(event) =>
+                setConfirmPassword(
+                  event.target.value
+                )
+              }
               required
               className="w-full rounded-xl border border-white/10 bg-[#11182d] px-4 py-3 text-white outline-none transition focus:border-cyan-400"
               placeholder="Confirm password"
             />
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && (
+            <p className="text-sm font-bold text-red-400">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-cyan-400 py-3 font-bold text-black transition hover:bg-cyan-300 disabled:opacity-50"
+            className="w-full rounded-xl bg-cyan-400 py-3 font-black text-black transition hover:bg-cyan-300 disabled:opacity-50"
           >
-            {loading ? "Creating account..." : "Sign Up"}
+            {loading
+              ? "Creating account..."
+              : "Sign Up"}
           </button>
         </form>
       </div>

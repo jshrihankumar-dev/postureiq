@@ -1,8 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation
+} from "react-router-dom";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const successMessage = location.state?.message;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +40,9 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Login failed");
+        throw new Error(
+          data.detail || "Login failed"
+        );
       }
 
       localStorage.setItem(
@@ -56,7 +64,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050816] flex items-center justify-center px-6">
+    <div className="flex min-h-screen items-center justify-center bg-[#050816] px-6">
       <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0b1020] p-10 shadow-2xl">
         <h1 className="mb-2 text-4xl font-black text-white">
           Welcome Back
@@ -65,6 +73,12 @@ export default function LoginPage() {
         <p className="mb-8 text-gray-400">
           Login to continue using PostureIQ
         </p>
+
+        {successMessage && (
+          <p className="mb-5 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-300">
+            {successMessage}
+          </p>
+        )}
 
         <form
           onSubmit={handleLogin}
@@ -105,7 +119,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-400">
+            <p className="text-sm font-bold text-red-400">
               {error}
             </p>
           )}
@@ -113,9 +127,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-cyan-400 py-3 font-bold text-black transition hover:bg-cyan-300 disabled:opacity-50"
+            className="w-full rounded-xl bg-cyan-400 py-3 font-black text-black transition hover:bg-cyan-300 disabled:opacity-50"
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading
+              ? "Logging in..."
+              : "Login"}
           </button>
         </form>
       </div>
