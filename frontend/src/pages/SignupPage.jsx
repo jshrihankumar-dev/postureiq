@@ -30,7 +30,7 @@ export default function SignupPage() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/auth/signup",
+        "http://amused-encouragement-production-6fda.up.railway.app/auth/signup",
         {
           method: "POST",
           headers: {
